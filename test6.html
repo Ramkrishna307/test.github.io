@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Get User's Location and Pincode Details</title>
+</head>
+<body>
+
+  <table id="pincodeTable">
+    <thead>
+      <tr>
+        <th>Latitude: <span id="lat"></span></th>
+        <th>Longitude: <span id="long"></span></th>
+        
+        
+        <th>Pincode: <span id="pincode"></span></th>
+      </tr>
+    </thead>
+    <tbody id="pincodeDetails"></tbody>
+  </table>
+
+  <h3>
+    <span id="time"></span>
+  </h3>
+
+  <div id="map"></div>
+
+  <br><br>
+  <input type="text" id="pincodeInput" placeholder="Enter Pincode">
+  <button onclick="getPincodeDetails()">Get Details</button>
+
+  <br><br>
+  <input type="text" id="searchInput" placeholder="Search by Name or Branch">
+  <button onclick="searchPincodeDetails()">Search</button>
+
+  <br><br>
+  <div id="pincodeDetailsResult"></div>
+
+  <script type="text/javascript">
+    // Function to get user's IP address
+    function getUserIP(callback) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', 'https://api.ipify.org?format=json', true);
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var response = JSON.parse(xhr.responseText);
+          var ipAddress = response.ip;
+          callback(ipAddress);
+        }
+      };
+      xhr.send();
+    }
+
+    // Function to get user's location using IP
+    function getUserLocation(ipAddress) {
+      var xhr = new XMLHttpRequest();
+      xhr.open('GET', `https://ipinfo.io/${ipAddress}/geo`, true);
+      xhr.onload = function() {
+        if (xhr.status === 200) {
+          var response = JSON.parse(xhr.responseText);
+          var city = response.city;
+          var region = response.region;
+          var organization = response.org;
+          var hostname = response.hostname;
+
+          document.getElementById("lat").textContent = response.loc.split(',')[0];
+          document.getElementById("long").textContent = response.loc.split(',')[1];
+          document.getElementById("pincode").textContent = response.postal;
+          document.getElementById("pincodeDetailsResult").innerHTML = "<strong>City:</strong> " + city + "<br>" +
+                                                                       "<strong>Region:</strong> " + region + "<br>" +
+                                                                       "<strong>Organization:</strong> " + organization + "<br>" +
+                                                                       "<strong>Hostname:</strong> " + hostname;
+
+          // Load the Google Maps iframe with the user's location
+          var iframe = document.createElement("iframe");
+          iframe.src = "https://maps.google.com/maps?q=" + response.loc + "&z=15&output=embed";
+          iframe.width = 360;
+          iframe.height = 270;
+          iframe.frameborder = 0;
+          iframe.style.border = "0";
+          document.getElementById("map").appendChild(iframe);
+
+          // Get current time based on timezone
+          var timezone = response.timezone;
+          var currentTime = new Date().toLocaleString('en-US', { timeZone: timezone });
+          document.getElementById("time").textContent = "Current Time: " + currentTime;
+
+          // Automatically fetch pincode details
+          getPincodeDetails();
+        }
+      };
+      xhr.send();
+    }
+
+    // Function to get pincode details
+    function getPincodeDetails() {
+      var pincode = document.getElementById("pincode").textContent;
+      fetchPincodeDetails(pincode);
+    }
+
+    // Function to search pincode details by name or branch
+    function searchPincodeDetails() {
+      var searchText = document.getElementById("searchInput").value;
+      fetchPincodeDetails("", searchText);
+    }
+
+    // Function to fetch pincode details from API
+    function fetchPincodeDetails(pincode, searchText) {
+      var apiUrl;
+      if (pincode) {
+        apiUrl = `https://api.postalpincode.in/pincode/${pincode}`;
+      } else if (searchText) {
+        apiUrl = `https://api.postalpincode.in/postoffice/${searchText}`;
+      }
+
+      fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+          displayPincodeDetails(data);
+        })
+        .catch(error => console.log(error));
+    }
+
+    // Function to display pincode details
+    function displayPincodeDetails(data) {
+      var pincodeDetails = document.getElementById("pincodeDetails");
+      pincodeDetails.innerHTML = "";
+
+      var response = data[0];
+
+      var message = document.createElement("p");
+      message.textContent = response.Message;
+      pincodeDetails.appendChild(message);
+
+      if (response.Status === "Success") {
+        var postOffices = response.PostOffice;
+
+        for (var i = 0; i < postOffices.length; i++) {
+          var postOffice = postOffices[i];
+
+          var detailsContainer = document.createElement("tr");
+          detailsContainer.classList.add("pincode-details-container");
+
+          var name = document.createElement("td");
+          name.textContent = postOffice.Name;
+
+          var description = document.createElement("td");
+          description.textContent = postOffice.Description;
+
+          var branchType = document.createElement("td");
+          branchType.textContent = postOffice.BranchType;
+
+          var deliveryStatus = document.createElement("td");
+          deliveryStatus.textContent = postOffice.DeliveryStatus;
+
+          var circle = document.createElement("td");
+          circle.textContent = postOffice.Circle;
+
+          var district = document.createElement("td");
+          district.textContent = postOffice.District;
+
+          var division = document.createElement("td");
+          division.textContent = postOffice.Division;
+
+          var region = document.createElement("td");
+          region.textContent = postOffice.Region;
+
+          var block = document.createElement("td");
+          block.textContent = postOffice.Block;
+
+          var state = document.createElement("td");
+          state.textContent = postOffice.State;
+
+          var country = document.createElement("td");
+          country.textContent = postOffice.Country;
+
+          var pincode = document.createElement("td");
+          pincode.textContent = postOffice.Pincode;
+
+          detailsContainer.appendChild(name);
+          detailsContainer.appendChild(description);
+          detailsContainer.appendChild(branchType);
+          detailsContainer.appendChild(deliveryStatus);
+          detailsContainer.appendChild(circle);
+          detailsContainer.appendChild(district);
+          detailsContainer.appendChild(division);
+          detailsContainer.appendChild(region);
+          detailsContainer.appendChild(block);
+          detailsContainer.appendChild(state);
+          detailsContainer.appendChild(country);
+          detailsContainer.appendChild(pincode);
+
+          pincodeDetails.appendChild(detailsContainer);
+        }
+      }
+    }
+
+    // Get user's IP and location details
+    getUserIP(getUserLocation);
+  </script>
+
+</body>
+</html>
+
